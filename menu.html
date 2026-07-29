@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>DineMaster — Menu</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body onload="init()">
+  <header>
+    <div>
+      <h2 style="margin:0">Menu</h2>
+      <div style="font-size:13px;color:#556;">Manage items and prices</div>
+    </div>
+    <div><a href="home.html" style="color:#2b6cb0;text-decoration:none;">← Back to Home</a></div>
+  </header>
+
+  <main class="container">
+    <div style="display:flex; gap:12px; margin-bottom:12px;">
+      <div style="flex:1;" class="item">
+        <h4>Add new menu item</h4>
+        <label>Name</label>
+        <input id="mname" placeholder="Dish name" />
+        <label>Category</label>
+        <input id="mcat" placeholder="Starter / Main / Dessert" />
+        <div>
+        <label>Price</label>
+        <input id="mprice" type="number" step="0.01" placeholder="9.99" />
+        </div>
+        <div style="margin-top:8px;">
+          <button onclick="addMenu()" style="background:#10b981;color:#fff;">Add</button>
+        </div>
+      </div>
+
+      <div style="width:300px;" class="item">
+        <h4>Quick import</h4>
+        <p style="margin:0 0 8px;">Paste CSV lines like: Margherita Pizza,Main,8.5</p>
+        <textarea id="csv" rows="5" style="width:100%;padding:8px;border-radius:6px;"></textarea>
+        <div style="margin-top:8px;">
+          <button onclick="importCSV()" style="background:#3b82f6;color:#fff;">Import CSV</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid" id="menuGrid"></div>
+  </main>
+
+  <script>
+  const API_BASE = './api/menu.php';
+
+  function getToken(){ return localStorage.getItem('dinemaster_token'); }
+  function authHeader(){ return { 'Authorization': 'Bearer ' + getToken(), 'Content-Type': 'application/json' }; }
+
+  async function init(){ 
+    if(!getToken()) window.location.href='index.html'; 
+    renderMenu(); 
+  }
+
+  async function addMenu(){
+    const name = document.getElementById('mname').value.trim();
+    const category = document.getElementById('mcat').value.trim() || 'Main';
+    const price = parseFloat(document.getElementById('mprice').value) || 0;
+    if (!name) return alert('Provide a name');
+
+    const res = await fetch(API_BASE, {
+      method: 'POST',
+      headers: authHeader(),
+      body: JSON.stringify({ name, category, price })
+    });
+
+    if (!res.ok) return alert('Failed to add');
+
+    document.getElementById('mname').value = '';
+    document.getElementById('mcat').value = '';
+    document.getElementById('mprice').value = '';
+
+    renderMenu();
+  }
+
+  async function importCSV(){
+    const text = document.getElementById('csv').value.trim();
+    if (!text) return;
+    const lines = text.split('\n').map(l=>l.trim()).filter(Boolean);
+
+    for (const l of lines) {
+      const [name, category='Main', price='0'] = l.split(',').map(p=>p.trim());
+      await fetch(API_BASE, {
+        method: 'POST',
+        headers: authHeader(),
+        body: JSON.stringify({ name, category, price: parseFloat(price) })
+      });
+    }
+
+    document.getElementById('csv').value = '';
+    renderMenu();
+  }
+
+  async function renderMenu(){
+    const grid = document.getElementById('menuGrid');
+    grid.innerHTML = '';
+
+    const res = await fetch(API_BASE, { headers: authHeader() });
+    if (!res.ok) {
+      grid.innerHTML = '<div class="item">Unable to load menu.</div>';
+      return;
+    }
+
+    const menu = await res.json();
+    if (menu.length === 0) {
+      grid.innerHTML = '<div class="item">No menu items yet.</div>';
+      return;
+    }
+
+    menu.forEach(m => {
+      const d = document.createElement('div');
+      d.className = 'item';
+      d.innerHTML = `
+        <h4>${m.name}</h4>
+        <div style="color:#556">${m.category} • $${Number(m.price).toFixed(2)}</div>
+        <div class="controls">
+          <button onclick="editItem(${m.id})" style="background:#f59e0b;color:#fff;">Edit</button>
+          <button onclick="removeItem(${m.id})" style="background:#ef4444;color:#fff;">Delete</button>
+        </div>`;
+      grid.appendChild(d);
+    });
+  }
+
+  async function removeItem(id){
+    if (!confirm('Remove item?')) return;
+    await fetch(`${API_BASE}/${id}`, {
+      method: 'DELETE',
+      headers: authHeader()
+    });
+    renderMenu();
+  }
+
+  async function editItem(id){
+    const res = await fetch(`${API_BASE}/${id}`, { headers: authHeader() });
+    if (!res.ok) return alert('Unable to fetch item');
+    const item = await res.json();
+
+    const newName = prompt('Dish name', item.name);
+    if (newName === null) return;
+    const newPrice = prompt('Price', item.price);
+    if (newPrice === null) return;
+
+    await fetch(`${API_BASE}/${id}`, {
+      method: 'PUT',
+      headers: authHeader(),
+      body: JSON.stringify({ name: newName, price: parseFloat(newPrice) })
+    });
+
+    renderMenu();
+  }
+</script>
+</body>
+</html>

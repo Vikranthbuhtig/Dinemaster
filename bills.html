@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>DineMaster — Bills</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    /* Modal styling */
+    .modal {
+      display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+      background:rgba(0,0,0,0.6); justify-content:center; align-items:center;
+    }
+    .modal-content {
+      background:#fff; border-radius:10px; padding:20px; width:320px;
+      box-shadow:0 10px 30px rgba(10,20,40,0.2);
+    }
+    .status-badge {
+      padding:4px 10px; border-radius:6px; color:#fff; font-size:12px;
+    }
+    .pending { background:#dc2626; } /* red */
+    .paid    { background:#16a34a; } /* green */
+  </style>
+</head>
+<body onload="init()">
+  <header>
+    <div>
+      <h2 style="margin:0">Bills</h2>
+      <div style="font-size:13px;color:#556;">Generate and track bills</div>
+    </div>
+    <div><a href="home.html" style="color:#2b6cb0;text-decoration:none;">← Back to Home</a></div>
+  </header>
+
+  <main class="container">
+    <div style="background:#fff;padding:12px;border-radius:10px;">
+      <h3>Outstanding Bills</h3>
+      <table id="billsTable">
+        <thead><tr>
+          <th>Customer</th><th>Order</th><th>Amount</th><th>Status</th><th>Paid With</th><th>Action</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </main>
+
+  <!-- Modal -->
+  <div id="billModal" class="modal">
+    <div class="modal-content">
+      <h4>Update Bill</h4>
+      <label>Status:</label>
+      <select id="mStatus" style="width:100%;margin-bottom:8px;">
+        <option value="pending">Pending</option>
+        <option value="paid">Paid</option>
+      </select>
+
+      <label>Payment Method:</label>
+      <select id="mMethod" style="width:100%;margin-bottom:12px;">
+        <option value="">-- Select Method --</option>
+        <option value="cash">Cash</option>
+        <option value="card">Card</option>
+        <option value="upi">UPI</option>
+      </select>
+
+      <button onclick="saveBill()" style="background:#0ea5e9;color:#fff;padding:8px;border-radius:8px;width:100%;border:0;">Save</button>
+      <button onclick="closeModal()" style="margin-top:6px;background:#ddd;padding:6px;border-radius:8px;width:100%;border:0;">Cancel</button>
+    </div>
+  </div>
+
+<script>
+  const API_BASE = './api';
+  let currentBillId = null;
+
+  function getToken(){ return localStorage.getItem('dinemaster_token'); }
+  function authHeader(){ return { 'Authorization': 'Bearer ' + getToken(), 'Content-Type': 'application/json' }; }
+
+  async function init(){ if(!getToken()) location.href='index.html'; renderBills(); }
+
+  async function renderBills(){
+  const tbody = document.querySelector('#billsTable tbody');
+  tbody.innerHTML = '';
+
+  const res = await fetch(API_BASE + '/bills.php', { headers: authHeader() });
+  const bills = res.ok ? await res.json() : [];
+
+  bills.forEach(b => {
+    const isPaid = (b.paid == 1); // Explicit numeric check
+    const statusText = isPaid ? 'Paid' : 'Pending';
+    const statusClass = isPaid ? 'paid' : 'pending';
+    const payMethod = isPaid && b.payment_method ? b.payment_method.toUpperCase() : '-';
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${b.customer_name || '-'}</td>
+      <td>${b.order_id}</td>
+      <td>$${(parseFloat(b.amount) || 0).toFixed(2)}</td>
+      <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+      <td>${payMethod}</td>
+      <td>
+        <button onclick="openModal(${b.id}, ${isPaid}, '${b.payment_method || ''}')"
+          style="background:#3b82f6;color:#fff;padding:8px;border-radius:8px;border:0;cursor:pointer;">
+          Update
+        </button>
+      </td>
+      `;
+     tbody.appendChild(tr);
+    });
+  }
+
+
+  function openModal(id, paid, method){
+    currentBillId = id;
+    document.getElementById('mStatus').value = paid ? 'paid':'pending';
+    document.getElementById('mMethod').value = method || '';
+    document.getElementById('billModal').style.display = 'flex';
+  }
+
+  function closeModal(){ document.getElementById('billModal').style.display = 'none'; }
+
+  async function saveBill(){
+    const status = document.getElementById('mStatus').value;
+    const method = document.getElementById('mMethod').value;
+
+    if(status === 'paid' && !method){
+      alert("Select payment method for paid bill");
+      return;
+    }
+
+    await fetch(API_BASE + `/bills.php/${currentBillId}/toggle`, {
+      method: 'POST',
+      headers: authHeader(),
+      body: JSON.stringify({ status, payment_method: method })
+    });
+
+    closeModal();
+    renderBills();
+  }
+</script>
+</body>
+</html>

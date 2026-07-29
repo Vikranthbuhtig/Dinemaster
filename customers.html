@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>DineMaster — Customers</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body onload="init()">
+  <header>
+    <div>
+      <h2 style="margin:0">Customers</h2>
+      <div style="font-size:13px;color:#556;">Customer database and visit counts</div>
+    </div>
+    <div><a href="home.html" style="color:#2b6cb0;text-decoration:none;">← Back to Home</a></div>
+  </header>
+
+  <main class="container">
+    <div class="row">
+      <input id="cname" placeholder="Full name" style="flex:1" />
+      <input id="cphone" placeholder="Phone" style="width:220px" />
+      <button onclick="addCustomer()" style="background:#3b82f6;color:#fff;border:0;">Add</button>
+    </div>
+
+    <table id="custTable">
+      <thead><tr><th>Name</th><th>Phone</th><th>Visits</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </main>
+
+  <script>
+    const API_BASE = './api/customers.php';
+    function getToken(){ return localStorage.getItem('dinemaster_token'); }
+    function authHeader(){ return { 'Authorization': 'Bearer ' + getToken(), 'Content-Type': 'application/json' }; }
+
+    async function init(){ if(!getToken()) window.location.href='index.html'; renderCustomers(); }
+
+    async function addCustomer(){
+      const name = document.getElementById('cname').value.trim();
+      const phone = document.getElementById('cphone').value.trim();
+      if (!name) return alert('Enter name');
+      await fetch(API_BASE, { method: 'POST', headers: authHeader(), body: JSON.stringify({ name, phone }) });
+      document.getElementById('cname').value=''; document.getElementById('cphone').value='';
+      renderCustomers();
+    }
+
+    async function renderCustomers(){
+      const tbody = document.querySelector('#custTable tbody'); tbody.innerHTML='';
+      const res = await fetch(API_BASE, { headers: authHeader() });
+      if (!res.ok) { tbody.innerHTML = '<tr><td colspan="4" style="color:#6a7b90">Unable to load customers.</td></tr>'; return; }
+      const customers = await res.json();
+      if (customers.length === 0) { tbody.innerHTML = '<tr><td colspan="4" style="color:#6a7b90">No customers yet.</td></tr>'; return; }
+      customers.forEach(c => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${c.name}</td><td>${c.phone || ''}</td><td>${c.visits || 0}</td>
+          <td><button onclick="remove(${c.id})" style="background:#ef4444;color:#fff;border:0;padding:6px;border-radius:6px;">Remove</button></td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function remove(id){
+      if (!confirm('Remove customer?')) return;
+      await fetch(API_BASE + id, { method: 'DELETE', headers: authHeader() });
+      renderCustomers();
+    }
+  </script>
+</body>
+</html>

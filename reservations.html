@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>DineMaster — Reservations</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body onload="init()">
+  <header style="background-color: aqua;">
+    <div>
+      <h1>DineMaster — Reservations</h1>
+      <div style="color:#6a7b90; font-size:13px;">Create and manage reservations</div>
+    </div>
+    <div>
+      <a href="home.html" style="text-decoration:none; color:#2b6cb0; font-weight:700;">← Back to Home</a>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="grid">
+      <div class="panel form">
+        <h3>New Reservation</h3>
+        <form id="resForm" onsubmit="addReservation(event)">
+          <div class="form-row">
+          <label for="rname">Customer name</label>
+          <input id="rname" name="name" required placeholder="Full name" />
+          </div>
+
+          <div>
+          <label for="rphone">Phone</label>
+          <input id="rphone" name="phone" required placeholder="+91 9xxxxxxxxx" />
+          </div>
+
+          <label for="rdate">Date</label>
+          <input id="rdate" name="date" type="date" required />
+
+          <label for="rtime">Time</label>
+          <input id="rtime" name="time" type="time" required />
+
+          <div>
+          <label for="rtable">Table</label>
+          <select id="rtable" name="table_id"></select>
+          </div>
+
+          <div>
+          <label for="rguests">Guests</label>
+          <input id="rguests" name="guests" type="number" min="1" value="2" />
+          </div>
+
+          <div style="margin-top:10px;">
+            <button class="btn" type="submit">Save reservation</button>
+          </div>
+        </form>
+      </div>
+
+      <div style="flex:1" class="panel">
+        <h3>Upcoming reservations</h3>
+        <div style="margin-top:8px;">
+          <input id="search" placeholder="Search by name or phone" oninput="renderReservations();" style="padding:8px;border-radius:8px;border:1px solid #e6eef9;width:100%;" />
+        </div>
+
+        <table id="resTable" aria-live="polite">
+          <thead>
+            <tr><th>Name</th><th>Phone</th><th>Date</th><th>Time</th><th>Table</th><th>Guests</th><th></th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const API_BASE = './api/reservations.php';
+    function getToken(){ return localStorage.getItem('dinemaster_token'); }
+    function authHeader(){ return { 'Authorization': 'Bearer ' + getToken(), 'Content-Type': 'application/json' }; }
+
+    async function init(){
+      if(!getToken()) window.location.href='index.html';
+      await loadTables();
+      await renderReservations();
+    }
+
+    async function loadTables(){
+      try {
+        const res = await fetch('./api/tables.php', { headers: authHeader() });
+        if (!res.ok) return;
+        const data = await res.json();
+        const sel = document.getElementById('rtable');
+        sel.innerHTML = '<option value="">Unassigned</option>';
+        data.forEach(t => {
+          const opt = document.createElement('option'); opt.value = t.id; opt.textContent = `#${t.number} (${t.seats} seats)`; sel.appendChild(opt);
+        });
+      } catch (err) { console.error(err); }
+    }
+
+    async function addReservation(e){
+      e.preventDefault();
+      const body = {
+        name: document.getElementById('rname').value.trim(),
+        phone: document.getElementById('rphone').value.trim(),
+        reserved_date: document.getElementById('rdate').value,
+        reserved_time: document.getElementById('rtime').value,
+        table_id: document.getElementById('rtable').value || null,
+        guests: parseInt(document.getElementById('rguests').value) || 1,
+      };
+      try {
+        const res = await fetch(API_BASE, {
+          method: 'POST',
+          headers: authHeader(),
+          body: JSON.stringify(body)
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(()=>({message:'Unable to save'}));
+          alert(err.message || 'Save failed');
+          return;
+        }
+        document.getElementById('resForm').reset();
+        renderReservations();
+      } catch (err) { console.error(err); alert('Network error'); }
+    }
+
+    async function renderReservations(){
+      const q = document.getElementById('search').value.toLowerCase();
+      try {
+        const res = await fetch(API_BASE, { headers: authHeader() });
+        if (!res.ok) { console.error('Failed to load reservations'); return; }
+        const list = await res.json();
+        const tbody = document.querySelector('#resTable tbody'); tbody.innerHTML = '';
+        const filtered = list.filter(r => !q || ((r.name||'') + ' ' + (r.phone||'')).toLowerCase().includes(q));
+        if (filtered.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="8" style="color:#6a7b90;">No reservations yet.</td></tr>';
+          return;
+        }
+        filtered.forEach(r => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td>${r.name}</td><td>${r.phone||''}</td><td>${r.reserved_date}</td><td>${r.reserved_time}</td><td>${r.table_number ? '#'+r.table_number : ''}</td><td>${r.guests}</td><td>${r.note || ''}</td>
+            <td class="actions"><button onclick="deleteRes(${r.id})" style="background:#fff;border:1px solid #f1dede;color:#b02a37;padding:6px;border-radius:6px;cursor:pointer">Delete</button></td>`;
+          tbody.appendChild(tr);
+        });
+      } catch (err) { console.error(err); }
+    }
+
+    async function deleteRes(id){
+      if (!confirm('Delete this reservation?')) return;
+      try {
+        const res = await fetch(`${API_BASE}/${id}`, {
+          method: 'DELETE', headers: authHeader()
+        });
+        if (!res.ok) return alert('Failed to delete');
+        renderReservations();
+      } catch (err) { console.error(err); alert('Network error'); }
+    }
+  </script>
+</body>
+</html>

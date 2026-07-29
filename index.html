@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>DineMaster</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .center { 
+      max-width:1000px; 
+      margin:20px 20px 10px;
+      background-color: rgb(173, 193, 214);
+      display:flex; 
+      overflow:hidden; }
+  </style>
+</head>
+<body>
+  <div class="center" role="main">
+    <div class="hero" aria-hidden="false">
+      <div class="brand">
+        <div class="logo small";>DM</div>
+        <div class="tle" aria-hidden="false">
+          <h1 style="font-size:60px;margin-bottom:0">DineMaster</h1>
+          <p style="font-size:15px;margin-left:3px;margin-top:0;color:#333232;">Restaurant Management System</p>
+        </div>
+      </div>
+
+      <h2 style="margin-top:2px;margin-bottom:0;">Welcome</h2>
+      <p class="note">Sign in to access the restaurant management dashboard.</p>
+      <div style="height: 200px;width: 450px;background-image:url(images/Rest1.webp);background-size: cover;">
+      </div>
+      <footer style="color:#333232">
+        DineMaster — Restaurant Management System.
+      </footer>
+    </div>
+
+    <div class="login" aria-label="Login area">
+      <h3 style="margin:100px 0 6px">Log in to DineMaster</h3>
+      <p style="margin:0 0 14px; color:#666; font-size:13px;">Enter credentials to access the dashboard.</p>
+
+      <form id="loginForm" onsubmit="return handleLogin(event)">
+        <div>
+          <label style="color:#444" for="username">Username</label>
+          <input id="username" name="username" type="text" autocomplete="username" required placeholder="Your username " />
+        </div>
+        <div>
+          <label style="color:#444" for="password">Password</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" required placeholder="Your password" />
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:20px;">
+          <div class="help">Secure sign-in</div>
+          <div id="err" class="error" aria-live="polite"></div>
+        </div>
+
+        <div style="margin-top:10px;">
+          <button class="btn" type="submit" style="width:100%; padding:12px 14px;">Sign in →</button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = './api/login.php';
+
+    async function handleLogin(e){
+      e.preventDefault();
+      document.getElementById('err').textContent = '';
+
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+
+      const formData = new URLSearchParams();
+      formData.append('username', username);
+      formData.append('password', password);
+
+      try {
+        const res = await fetch(API_BASE, {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!res.ok) {
+          document.getElementById('err').textContent = 'Invalid username or password';
+          return;
+        }
+
+        const payload = await res.json();
+        localStorage.setItem('dinemaster_token', payload.token);
+        localStorage.setItem('dinemaster_user', JSON.stringify(payload.user));
+        
+        window.location.href = 'home.html';
+      } catch (err) {
+        console.error(err);
+        document.getElementById('err').textContent = 'Network error';
+      }
+    }
+  </script>
+</body>
+</html>

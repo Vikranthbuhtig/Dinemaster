@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>DineMaster — Staff</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body onload="init()">
+  <header>
+    <div>
+      <h2 style="margin:0">Staff</h2>
+      <div style="font-size:13px;color:#556;">Employee directory</div>
+    </div>
+    <div><a href="home.html" style="color:#2b6cb0;text-decoration:none;">← Back to Home</a></div>
+  </header>
+
+  <main class="container">
+    <div class="card" style="margin-bottom:12px;">
+      <h3>Add staff member</h3>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <input id="sname" placeholder="Full name" style="flex:1" />
+        <input id="srole" placeholder="Role (e.g., Server)" style="width:200px" />
+        <input id="sphone" placeholder="Phone" style="width:200px" />
+        <button onclick="addStaff()" style="background:#0ea5e9;color:#fff;border:0;border-radius:8px;padding:8px 10px;">Add</button>
+      </div>
+    </div>
+
+    <div class="cards" id="staffGrid"></div>
+  </main>
+
+  <script>
+    const API_BASE = './api/staff.php';
+    function getToken(){ return localStorage.getItem('dinemaster_token'); }
+    function authHeader(){ return { 'Authorization': 'Bearer ' + getToken(), 'Content-Type': 'application/json' }; }
+
+    async function init(){ if(!getToken()) window.location.href='index.html'; renderStaff(); }
+
+    async function addStaff(){
+      const name = document.getElementById('sname').value.trim();
+      const role = document.getElementById('srole').value.trim();
+      const phone = document.getElementById('sphone').value.trim();
+      if (!name) return alert('Enter name');
+      await fetch(API_BASE, { method: 'POST', headers: authHeader(), body: JSON.stringify({ name, role, phone }) });
+      document.getElementById('sname').value=''; document.getElementById('srole').value=''; document.getElementById('sphone').value='';
+      renderStaff();
+    }
+
+    async function renderStaff(){
+      const grid = document.getElementById('staffGrid'); grid.innerHTML = '';
+      const res = await fetch(API_BASE + '/staff', { headers: authHeader() });
+      if (!res.ok) { grid.innerHTML = '<div class="card">Unable to load staff.</div>'; return; }
+      const staff = await res.json();
+      if (staff.length === 0) { grid.innerHTML = '<div class="card">No staff yet.</div>'; return; }
+      staff.forEach(s => {
+        const d = document.createElement('div'); d.className='card';
+        d.innerHTML = `<h4>${s.name}</h4><div style="color:#556">${s.role}</div><div style="margin-top:8px;color:#6a7b90">${s.phone || ''}</div>
+          <div style="margin-top:10px;"><button onclick="remove(${s.id})" style="background:#ef4444;color:#fff;border:0;padding:8px;border-radius:8px;">Remove</button></div>`;
+        grid.appendChild(d);
+      });
+    }
+
+    async function remove(id){
+      if (!confirm('Remove staff member?')) return;
+      await fetch(API_BASE + '/staff/' + id, { method: 'DELETE', headers: authHeader() });
+      renderStaff();
+    }
+  </script>
+</body>
+</html>

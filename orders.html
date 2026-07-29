@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>DineMaster — Orders</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body onload="init()">
+  <header>
+    <div>
+      <h2 style="margin:0">Orders</h2>
+      <div style="font-size:13px;color:#556;">Create and manage orders</div>
+    </div>
+    <div><a href="home.html" style="color:#2b6cb0;text-decoration:none;">← Back to Home</a></div>
+  </header>
+
+  <main class="container">
+    <div class="panel">
+      <h3>New Order</h3>
+      <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <div style="flex:1; min-width:220px;">
+          <label>Customer</label><br/>
+          <select id="orderCustomer"></select>
+        </div>
+        <div style="width:140px;">
+          <label>Table</label><br/>
+          <select id="orderTable"></select>
+        </div>
+        <div style="width:160px;">
+          <label>Menu item</label><br/>
+          <select id="menuSelect"></select>
+        </div>
+        <div style="width:100px;">
+          <label>Qty</label><br/>
+          <input id="qty" type="number" value="1" min="1" />
+        </div>
+        <div style="align-self:end;">
+          <button onclick="addItem()" style="padding:8px 12px;border-radius:8px;background:#16a34a;color:#fff;border:0;cursor:pointer;">Add</button>
+        </div>
+      </div>
+
+      <div style="margin-top:14px;">
+        <table id="cart">
+          <thead><tr><th>Item</th><th>Qty</th><th>Price</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div style="text-align:right; margin-top:10px;">
+          <strong>Total: $<span id="total">0.00</span></strong>
+          <button onclick="placeOrder()" style="margin-left:12px;padding:8px 12px;border-radius:8px;background:#0ea5e9;color:#fff;border:0;cursor:pointer;">Place order</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Recent Orders</h3>
+      <table id="ordersTable">
+        <thead><tr><th>Customer</th><th>Items</th><th>Table</th><th>Total</th><th>Status</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </main>
+
+  <script>
+    const API_BASE = './api';
+    function getToken(){ return localStorage.getItem('dinemaster_token'); }
+    function authHeader(){ return { 'Authorization': 'Bearer ' + getToken(), 'Content-Type': 'application/json' }; }
+
+    let cart = [];
+
+    async function init(){
+      if(!getToken()) window.location.href='index.html';
+      await loadSelects();
+      renderCart();
+      renderOrders();
+    }
+
+    async function loadSelects(){
+      try {
+        const [customersRes, menuRes, tablesRes] = await Promise.all([
+          fetch(API_BASE + '/customers.php', { headers: authHeader() }),
+          fetch(API_BASE + '/menu.php', { headers: authHeader() }),
+          fetch(API_BASE + '/tables.php', { headers: authHeader() })
+        ]);
+        const customers = customersRes.ok ? await customersRes.json() : [];
+        const menus = menuRes.ok ? await menuRes.json() : [];
+        const tables = tablesRes.ok ? await tablesRes.json() : [];
+
+        const csel = document.getElementById('orderCustomer'); csel.innerHTML='';
+        csel.appendChild(new Option('Walk-in', ''));
+        customers.forEach(c => csel.add(new Option(c.name, c.id)));
+
+        const msel = document.getElementById('menuSelect'); msel.innerHTML='';
+        menus.forEach(m => {
+        const price = parseFloat(m.price) || 0;
+        msel.add(new Option(`${m.name} — $${price.toFixed(2)}`, m.id));
+        });
+
+        const tsel = document.getElementById('orderTable'); tsel.innerHTML='';
+        tables.forEach(t => tsel.add(new Option('#' + t.number, t.id)));
+      } catch (err) { console.error(err); }
+    }
+
+    function addItem(){
+      const menuId = parseInt(document.getElementById('menuSelect').value);
+      const name = document.getElementById('menuSelect').selectedOptions[0].text.split('—')[0].trim();
+      const qty = parseInt(document.getElementById('qty').value) || 1;
+      cart.push({ menu_item_id: menuId, name, qty });
+      renderCart();
+    }
+
+    function renderCart(){
+      const tbody = document.querySelector('#cart tbody'); tbody.innerHTML='';
+      let total = 0;
+      cart.forEach((ci, idx) => {
+        // price will be set on server at order placement (but we could fetch menu item price if needed)
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${ci.name}</td><td>${ci.qty}</td><td>$--</td>
+          <td><button onclick="removeFromCart(${idx})" style="padding:6px;border-radius:6px;border:1px solid #f1dede;background:#fff;color:#b02a37;cursor:pointer;">Remove</button></td>`;
+        tbody.appendChild(tr);
+      });
+      document.getElementById('total').textContent = '--';
+    }
+
+    function removeFromCart(idx){ cart.splice(idx,1); renderCart(); }
+
+    async function placeOrder(){
+      if (cart.length === 0) return alert('Cart is empty');
+      const customer_id = document.getElementById('orderCustomer').value || null;
+      const table_id = document.getElementById('orderTable').value || null;
+      const body = { customer_id, table_id, items: cart };
+      try {
+        const res = await fetch(API_BASE + `/orders.php`, { method: 'POST', headers: authHeader(), body: JSON.stringify(body) });
+        if (!res.ok) {
+          const err = await res.json().catch(()=>({ message: 'Order failed' }));
+          return alert(err.message || 'Order failed');
+        }
+        cart = [];
+        renderCart();
+        renderOrders();
+        alert('Order placed');
+      } catch (err) { console.error(err); alert('Network error'); }
+    }
+
+    async function renderOrders(){
+      try {
+        const res = await fetch(API_BASE + `/orders.php`, { headers: authHeader() });
+        const tbody = document.querySelector('#ordersTable tbody'); tbody.innerHTML = '';
+        if (!res.ok) { tbody.innerHTML = '<tr><td colspan="5" style="color:#6a7b90;">Unable to load orders.</td></tr>'; return; }
+        const orders = await res.json();
+        if (orders.length === 0) { tbody.innerHTML = '<tr><td colspan="5" style="color:#6a7b90;">No orders yet.</td></tr>'; return; }
+        orders.forEach(o => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td>${o.customer_name || 'Walk-in'}</td><td>${o.items.map(i=>i.name+' x'+i.qty).join(', ')}</td><td>#${o.table_number || ''}</td><td>$${(o.total||0).toFixed(2)}</td>
+          <td>
+            ${o.status}
+            ${o.status === "served" || o.status === "in_progress" || o.status === "pending" 
+            ? `<button onclick="generateBill(${o.id})" style="margin-left:6px;background:#10b981;color:#fff;padding:6px;border-radius:6px;border:0;cursor:pointer;">Bill</button>`
+            : ''}
+          </td>`;
+          tbody.appendChild(tr);
+        });
+      } catch (err) { console.error(err); }
+    }
+    async function generateBill(orderId){
+      const res = await fetch('./api/generate_bill.php', {
+      method: 'POST',
+      headers: authHeader(),
+      body: JSON.stringify({ order_id: orderId })
+      });
+      if(!res.ok) return alert('Bill generation failed');
+      alert('Bill generated');
+      renderOrders();
+    }
+
+  </script>
+</body>
+</html>

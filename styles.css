@@ -1,0 +1,133 @@
+/* DineMaster consolidated stylesheet (updated)
+   Save as styles.css and link it from every HTML page.
+   This file covers the global layout, components and the smaller
+   classes that were used inline across the pages.
+*/
+
+:root{
+  --bg:#f7fbff;
+  --card-bg:#fff;
+  --text:#172b4d;
+  --muted:#6a7b90;
+  --accent:#2b6cb0;
+  --accent-2:#ff6b6b;
+  --success:#10b981;
+  --danger:#ef4444;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family:Inter, Arial, Helvetica, sans-serif;color:var(--text);background:linear-gradient(#f7f9fc,#eef3fb);}
+
+/* Header / top bar */
+header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:24px;
+  padding:14px 20px;
+  background:linear-gradient(90deg,#f7fbff,#f7fbff);
+  box-shadow:0 6px 24px rgba(20,30,50,0.06);
+  position:sticky; top:0; z-index:10;
+}
+
+/* Brand */
+.brand{display:flex;align-items:center;gap:14px}
+.logo{
+  width:56px;height:56px;border-radius:10px;background:var(--accent-2);color:#fff;
+  font-weight:800;display:flex;align-items:center;justify-content:center;font-size:22px;
+  box-shadow:0 6px 18px rgba(255,107,107,0.18);
+}
+.logo.small{width:84px;height:84px;font-size:24px;margin-top:20px;}
+.title h1{margin:0;font-size:20px;line-height:1}
+.title p{margin:0;font-size:12px;color:rgb(50, 50, 50);opacity:.9}
+
+/* Small typographic helpers referenced in pages */
+.sub{margin:0 0 0;font-size:14px;color:#444}
+.note{font-size:13px;color:#2d2c2c;margin-top:1px;}
+
+/* Navigation */
+nav{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+nav a{text-decoration:none;color:var(--accent);font-weight:600;background:#eef7ff;padding:8px 12px;border-radius:8px}
+
+/* Layout containers */
+.container, main{max-width:1100px;margin:24px auto;padding:0 18px;background-color: #eceef2;}
+.center{max-width:900px;margin:40px auto;background:var(--card-bg);border-radius:10px;box-shadow:0 8px 30px rgba(20,30,50,0.08);overflow:hidden;display:flex;gap:0}
+
+/* Hero / login column */
+.hero{flex:1 1 420px;padding:36px 104px;background:linear-gradient(135deg, rgba(255,182,193,0.08), rgba(173,216,230,0.06))}
+.hero h2{margin-top:6px;font-size:20px}
+.login{width:400px;padding:28px 26px;background-color: #172b4d;border:4px solid darkslategray}
+
+/* Cards / panels */
+.card, .panel, .item, .controls, .map, .login, .form{
+  background:var(--card-bg);
+  padding:14px;
+  border-radius:10px;
+  box-shadow:0 10px 30px rgba(20,34,60,0.04);
+}
+.card h3, .panel h3, .item h4{margin:0 0 8px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+
+/* Buttons / inputs */
+input,select,textarea,button{
+  padding:8px 10px;border-radius:8px;border:1px solid #dbe6f0;font-size:14px;outline:none;
+}
+input:focus,select:focus,textarea:focus{border-color:#8fb6ff;box-shadow:0 4px 14px rgba(135,171,255,0.12)}
+
+.btn{background:linear-gradient(90deg,#4c8cff,#6ad1ff);color:#fff;border:0;cursor:pointer;font-weight:600;padding:10px 12px;border-radius:8px}
+
+/* Accent buttons used inline in pages */
+.btn-primary{background:#3b82f6;color:#fff;border:0;padding:10px 12px;border-radius:8px}
+.btn-success{background:var(--success);color:#fff;border:0;padding:8px 12px;border-radius:8px}
+.btn-danger{background:var(--danger);color:#fff;border:0;padding:8px 12px;border-radius:8px}
+
+/* Buttons inside table action cells */
+.actions button{
+  padding:6px;border-radius:6px;border:1px solid transparent;cursor:pointer;
+}
+.actions button.delete{background:#fff;border-color:#f1dede;color:#b02a37}
+.actions button.remove{background:#ef4444;color:#fff;border:0}
+.actions button.small{padding:6px 8px;font-size:13px}
+
+/* Utilities */
+.help{font-size:12px;color:#666}
+.error{color:#d9534f;font-weight:600}
+.cred{background:#f4f7fb;padding:10px;border-radius:6px;font-size:13px;color:#1f4e79}
+.pill{display:inline-block;padding:6px 8px;border-radius:20px;background:#eef8ff;color:#0b5aa6;font-weight:600}
+
+/* Tables */
+table{width:100%;border-collapse:collapse;font-size:14px;margin-top:8px}
+th,td{padding:10px 8px;text-align:left;border-bottom:1px solid #eef3f8}
+
+/* Table box (floor map) */
+.tableBox{display:inline-flex;align-items:center;justify-content:center;width:90px;height:70px;border-radius:8px;margin:8px;background:#eef8ff;color:#08306b;font-weight:700}
+.tableBox.busy{background:#ffe9e9;color:#7b1f1f}
+.tableBox.res{background:#fff7e6;color:#6f4c00}
+
+/* Small helpers for forms and layouts used across pages */
+.row{display:flex;gap:8px;align-items:center}
+.quick{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+
+/* Footer */
+footer{text-align:center;font-size:12px;color:var(--muted);margin-top:16px}
+
+/* Responsive */
+@media (max-width:720px){
+  .center{flex-direction:column}
+  header{padding:12px}
+  .hero{padding:20px}
+}
+
+/* Minor helpers used by specific pages */
+.centered{display:flex;align-items:center;justify-content:center}
+.small-muted{font-size:13px;color:var(--muted)}
+.link-muted{color:#2b6cb0;text-decoration:none}
+
+/* Convenience: normalize inline-styled headings/paragraphs used throughout pages */
+.h-large{font-size:22px;margin-bottom:6px}
+.h-medium{font-size:18px;margin-bottom:6px}
+
+/* If you still use inline styles for layout, here are safer defaults */
+.btn-inline{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;background:linear-gradient(90deg,#fff,#f7fbff);color:#183b6f;text-decoration:none}
+
+/* End of stylesheet */

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>DineMaster — Home</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body onload="checkAuth(); loadSnapshot()">
+  <header>
+    <div class="brand" role="banner">
+      <div class="logo">DM</div>
+      <div class="title" aria-hidden="false">
+        <h1 style="font-size:20px;margin-bottom:3px;">DineMaster</h1>
+        <p>Restaurant Management System</p>
+      </div>
+    </div>
+
+    <nav aria-label="Main navigation">
+      <a href="reservations.html">🍽️ Reservations</a>
+      <a href="orders.html">🧾 Orders</a>
+      <a href="menu.html">📋 Menu</a>
+      <a href="staff.html">👥 Staff</a>
+      <a href="tables.html">🪑 Tables</a>
+      <a href="customers.html">🧑‍🤝‍🧑 Customers</a>
+      <a href="bills.html">💳 Bills</a>
+      <a href="#" onclick="logout(); return false;" style="background:#ff0000;color:white;">Sign out</a>
+    </nav>
+    
+  </header>
+
+  <main class="container">
+    <section style="display:flex; gap:16px; align-items:stretch; margin-bottom:18px;">
+      <div style="flex:1;background-color: bisque;" class="card">
+        <h3>Welcome back</h3>
+        <p>Use the links on the top to manage reservations, orders, menu, staff and billing.</p>
+
+        <div class="quick" style="margin-top:12px;">
+          <a href="reservations.html">➕ New Reservation</a>
+          <a href="orders.html">➕ New Order</a>
+          <a href="menu.html">✏️ Edit Menu</a>
+        </div>
+      </div>
+
+      <div style="width:320px;color:white;background-image: url(images/Rest2.webp);background-size: cover;" class="card">
+        <h3>Today's snapshot</h3>
+        <p id="snapshot">Loading...</p>
+      </div>
+    </section>
+
+    <section class="grid" aria-label="Quick links">
+      <div class="card" style="background-color: aqua;">
+        <h3>Reservations</h3>
+        <p>View and manage upcoming reservations. Quick filters and table assignments.</p>
+        <p style="margin-top:10px;"><a href="reservations.html">Open Reservations →</a></p>
+      </div>
+
+      <div class="card" style="background-color: #30e968;">
+        <h3>Orders</h3>
+        <p>Create new orders, view pending and served orders. Integrated with table & menu.</p>
+        <p style="margin-top:10px;"><a href="orders.html">Open Orders →</a></p>
+      </div>
+
+      <div class="card" style="background-color: rgb(242, 255, 1);">
+        <h3>Menu</h3>
+        <p>Manage items, categories and prices. Export menu for printing.</p>
+        <p style="margin-top:10px;"><a href="menu.html">Open Menu →</a></p>
+      </div>
+
+      <div class="card" style="background-color: rgb(255, 0, 251);">
+        <h3>Staff</h3>
+        <p>Roster, roles and contact details for employees.</p>
+        <p style="margin-top:10px;"><a href="staff.html">Open Staff →</a></p>
+      </div>
+
+      <div class="card" style="background-color: rgb(255, 90, 90);">
+        <h3>Tables</h3>
+        <p>Layout, capacity and status of dining tables.</p>
+        <p style="margin-top:10px;"><a href="tables.html">Open Tables →</a></p>
+      </div>
+
+      <div class="card" style="background-color: rgb(255, 157, 0);">
+        <h3>Bills</h3>
+        <p>Generate and track bills, payments and receipts.</p>
+        <p style="margin-top:10px;"><a href="bills.html">Open Bills →</a></p>
+      </div>
+    </section>
+
+    <section style="margin-top:18px;">
+      <div class="card" style="background-color: rgb(171, 2, 249);">
+        <h3>Quick tips</h3>
+        <ul style="color:#445; padding-left:18px;">
+          <li>All data is stored in MySQL via the backend API. The frontend calls REST endpoints.</li>
+          <li>Pages include forms and tables to help you wire REST endpoints later.</li>
+        </ul>
+      </div>
+    </section>
+
+    <footer>
+      DineMaster — Restaurant Management System.
+    </footer>
+  </main>
+
+  <script>
+    const API_BASE = '/api';
+
+    function getAuthToken(){
+      return localStorage.getItem('dinemaster_token');
+    }
+
+    function checkAuth(){
+      if (!getAuthToken()) {
+        window.location.href = 'index.html';
+      }
+    }
+
+    async function loadSnapshot(){
+      try {
+        const token = getAuthToken();
+        const res = await fetch(API_BASE + '/snapshot', { headers: { 'Authorization': 'Bearer ' + token }});
+        if (!res.ok) {
+          if (res.status === 401) { logout(); }
+          document.getElementById('snapshot').textContent = '';
+          return;
+        }
+        const data = await res.json();
+        // Expected: { reservationsToday: 4, ordersToday: 8, openBills: 2 }
+        document.getElementById('snapshot').innerHTML =
+          `<strong>${data.reservationsToday}</strong> reservations • <strong>${data.ordersToday}</strong> orders today • <strong>${data.openBills}</strong> open bills`;
+      } catch (err) {
+        console.error(err);
+        document.getElementById('snapshot').textContent = 'Network error';
+      }
+    }
+
+    function logout(){
+      localStorage.removeItem('dinemaster_token');
+      localStorage.removeItem('dinemaster_user');
+      window.location.href = 'index.html';
+    }
+  </script>
+</body>
+</html>

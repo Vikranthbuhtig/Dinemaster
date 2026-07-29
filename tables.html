@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>DineMaster — Tables</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body onload="init()">
+  <header>
+    <div>
+      <h2 style="margin:0">Tables</h2>
+      <div style="font-size:13px;color:#556;">Floor layout and table status</div>
+    </div>
+    <div><a href="home.html" style="color:#2b6cb0;text-decoration:none;">← Back to Home</a></div>
+  </header>
+
+  <main class="container">
+    <div class="layout">
+      <div class="map" id="map">
+        <h3>Dining floor</h3>
+        <div id="tableGrid" style="display:flex;flex-wrap:wrap;"></div>
+      </div>
+      <div class="controls">
+        <h3>Manage table</h3>
+        <div>
+          <label>Table #</label><input id="tnumber" type="number" style="width:100%;padding:8px;margin-top:6px;border-radius:8px;border:1px solid #e6eef9;" />
+          <label style="margin-top:8px;">Seats</label><input id="tseats" type="number" style="width:100%;padding:8px;margin-top:6px;border-radius:8px;border:1px solid #e6eef9;" />
+          <label style="margin-top:8px;">Status</label>
+          <select id="tstatus" style="width:100%;padding:8px;margin-top:6px;border-radius:8px;border:1px solid #e6eef9;">
+            <option value="free">free</option>
+            <option value="reserved">reserved</option>
+            <option value="busy">busy</option>
+            <option value="out_of_service">out_of_service</option>
+          </select>
+          <div style="margin-top:10px;">
+            <button onclick="addTable()" style="background:#10b981;color:#fff;padding:8px;border-radius:8px;border:0;">Add / Update</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const API_BASE = './api/tables.php';
+    function getToken(){ return localStorage.getItem('dinemaster_token'); }
+    function authHeader(){ return { 'Authorization': 'Bearer ' + getToken(), 'Content-Type': 'application/json' }; }
+
+    async function init(){ if(!getToken()) window.location.href='index.html'; renderTables(); }
+
+    async function renderTables(){
+      const grid = document.getElementById('tableGrid'); grid.innerHTML='';
+      const res = await fetch(API_BASE, { headers: authHeader() });
+      if (!res.ok) { grid.innerHTML = '<div style="color:#6a7b90">Unable to load tables.</div>'; return; }
+      const tables = await res.json();
+      if (tables.length === 0) { grid.innerHTML = '<div style="color:#6a7b90">No tables configured yet. Add some on the right.</div>'; return; }
+      tables.forEach(t => {
+        const div = document.createElement('div'); const cls = t.status === 'busy' ? 'tableBox busy' : t.status === 'reserved' ? 'tableBox res' : 'tableBox';
+        div.className = cls;
+        div.innerHTML = `<div style="text-align:center;"><div>#${t.number}</div><div style="font-size:12px;margin-top:6px;">${t.seats} seats</div></div>`;
+        div.style.cursor = 'pointer';
+        div.onclick = ()=>fillForm(t);
+        grid.appendChild(div);
+      });
+    }
+
+    async function addTable(){
+      const number = parseInt(document.getElementById('tnumber').value);
+      const seats = parseInt(document.getElementById('tseats').value) || 2;
+      const status = document.getElementById('tstatus').value;
+      if (!number) return alert('Provide table number');
+      const body = { number, seats, status };
+      await fetch(API_BASE, { method: 'POST', headers: authHeader(), body: JSON.stringify(body) });
+      renderTables();
+    }
+
+    function fillForm(t){
+      document.getElementById('tnumber').value = t.number;
+      document.getElementById('tseats').value = t.seats;
+      document.getElementById('tstatus').value = t.status;
+    }
+  </script>
+</body>
+</html>
